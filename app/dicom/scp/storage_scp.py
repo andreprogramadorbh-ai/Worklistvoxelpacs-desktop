@@ -9,6 +9,7 @@ from pynetdicom import AE, ALL_TRANSFER_SYNTAXES, AllStoragePresentationContexts
 from pynetdicom.sop_class import Verification
 
 from app.config.models import ServiceSettings
+from app.queue.quarantine import QuarantineStore
 from app.queue.spool import SpoolStore
 from app.validation.dataset import validate_dataset
 
@@ -19,6 +20,7 @@ class StorageScp:
     def __init__(self, settings: ServiceSettings, spool: SpoolStore) -> None:
         self.settings = settings
         self.spool = spool
+        self.quarantine = QuarantineStore(settings.quarantine_path, spool.database)
         self._server: Any | None = None
 
     def start(self) -> None:
@@ -71,7 +73,14 @@ class StorageScp:
             dataset.file_meta = event.file_meta
             validation = validate_dataset(dataset)
             if not validation.accepted:
-                LOGGER.warning("cstore_rejeitado_validacao:%s", validation.reason_code)
+                self.quarantine.persist(
+                    event.encoded_dataset(),
+                    source_ae=str(event.assoc.requestor.ae_title).strip(),
+                    source_ip=str(event.assoc.requestor.address),
+                    reason_code=validation.reason_code,
+                    reason_detail=",".join(validation.missing),
+                )
+                LOGGER.warning("cstore_quarentena_validacao:%s", validation.reason_code)
                 return 0xC210
             source_ae = str(event.assoc.requestor.ae_title).strip()
             self.spool.persist(

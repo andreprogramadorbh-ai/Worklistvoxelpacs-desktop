@@ -5,6 +5,7 @@ from pydicom.uid import ExplicitVRLittleEndian
 
 from app.config.models import ServiceSettings, validate_ae_title
 from app.database.database import Database
+from app.queue.quarantine import QuarantineStore
 from app.queue.spool import SpoolStore
 from app.validation.dataset import mask_identifier, validate_dataset
 
@@ -54,3 +55,14 @@ def test_spool_is_idempotent(tmp_path: Path):
     assert second.duplicate
     with db.connection() as conn:
         assert conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0] == 1
+
+
+def test_quarantine_persists_raw_dataset_and_reason(tmp_path: Path):
+    db = Database(tmp_path / "router.sqlite3")
+    db.initialize()
+    quarantine = QuarantineStore(tmp_path / "quarantine", db)
+    path = quarantine.persist(b"INVALID_DICOM", source_ae="CT01", source_ip="10.0.0.10", reason_code="MISSING_REQUIRED_DICOM_ATTRIBUTES", reason_detail="PatientID")
+    assert path.exists()
+    with db.connection() as conn:
+        row = conn.execute("SELECT reason_code FROM quarantine_items").fetchone()
+    assert row["reason_code"] == "MISSING_REQUIRED_DICOM_ATTRIBUTES"
