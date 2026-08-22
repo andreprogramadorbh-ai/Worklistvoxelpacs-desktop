@@ -12,6 +12,7 @@ from app.api.server import LocalApi
 from app.config.models import ServiceSettings
 from app.config.repository import SettingsRepository
 from app.database.database import Database
+from app.dicom.mwl.worklist_scp import WorklistScp
 from app.dicom.scp.storage_scp import StorageScp
 from app.queue.dispatcher import QueueDispatcher
 from app.queue.spool import SpoolStore
@@ -25,6 +26,7 @@ class RouterRuntime:
         self.database = Database(settings.database_path)
         self.spool = SpoolStore(settings.spool_path, self.database)
         self.storage_scp = StorageScp(settings, self.spool)
+        self.worklist_scp = WorklistScp(settings, self.database)
         self.stop_event = threading.Event()
         self.api_server: uvicorn.Server | None = None
 
@@ -32,12 +34,14 @@ class RouterRuntime:
         self._prepare_directories()
         self.database.initialize()
         self.storage_scp.start()
+        self.worklist_scp.start()
         self._start_api()
         threading.Thread(target=self._dispatch_loop, name="queue-dispatcher", daemon=True).start()
         LOGGER.info("router_service_started")
 
     def stop(self) -> None:
         self.stop_event.set()
+        self.worklist_scp.stop()
         self.storage_scp.stop()
         if self.api_server:
             self.api_server.should_exit = True
