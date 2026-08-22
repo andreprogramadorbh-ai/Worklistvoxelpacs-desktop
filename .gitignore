@@ -1,0 +1,48 @@
+# Python and builds
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.spec
+*.exe
+*.msi
+
+# Virtual environments
+.venv/
+venv/
+
+# Local operating data and protected configuration
+runtime/
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.wal
+*.shm
+*.log
+.env
+.env.*
+config.local.json
+config.secrets.json
+
+# Clinical data must never be versioned
+*.dcm
+*.dicom
+spool/
+quarantine/
+exports/
+backups/
+
+# Windows / IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
