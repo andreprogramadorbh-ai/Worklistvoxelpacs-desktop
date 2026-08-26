@@ -46,6 +46,21 @@ jobs:
             Pop-Location
           }
 
+      - name: Collect service diagnostics on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "--- Serviço ---"
+          Get-Service -Name VOXELRouterService -ErrorAction SilentlyContinue | Format-List *
+          & sc.exe queryex VOXELRouterService
+          Write-Host "--- Logs do Router ---"
+          Get-ChildItem "C:\\ProgramData\\VOXEL\\Router\\logs" -ErrorAction SilentlyContinue
+          Get-Content "C:\\ProgramData\\VOXEL\\Router\\logs\\router.log" -Tail 200 -ErrorAction SilentlyContinue
+          Write-Host "--- Eventos de aplicação recentes ---"
+          Get-WinEvent -FilterHashtable @{LogName = "Application"; StartTime = (Get-Date).AddMinutes(-10)} |
+            Select-Object -First 50 TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+            Format-List
+
       - name: Upload distributable package
         uses: actions/upload-artifact@v4
         with:
