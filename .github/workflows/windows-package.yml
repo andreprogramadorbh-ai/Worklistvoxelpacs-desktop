@@ -35,12 +35,14 @@ jobs:
         shell: pwsh
         run: |
           Push-Location dist/windows/VOXELRouterPackage
+          $smokeTestSucceeded = $false
           try {
             ./install.ps1
             ./test-reception.ps1
+            $smokeTestSucceeded = $true
           }
           finally {
-            if (Get-Service -Name VOXELRouterService -ErrorAction SilentlyContinue) {
+            if ($smokeTestSucceeded -and (Get-Service -Name VOXELRouterService -ErrorAction SilentlyContinue)) {
               ./uninstall.ps1 -RemoveData
             }
             Pop-Location
@@ -57,9 +59,28 @@ jobs:
           Get-ChildItem "C:\\ProgramData\\VOXEL\\Router\\logs" -ErrorAction SilentlyContinue
           Get-Content "C:\\ProgramData\\VOXEL\\Router\\logs\\router.log" -Tail 200 -ErrorAction SilentlyContinue
           Write-Host "--- Eventos de aplicação recentes ---"
-          Get-WinEvent -FilterHashtable @{LogName = "Application"; StartTime = (Get-Date).AddMinutes(-10)} |
-            Select-Object -First 50 TimeCreated, ProviderName, Id, LevelDisplayName, Message |
-            Format-List
+          try {
+            Get-WinEvent -FilterHashtable @{LogName = "Application"; StartTime = (Get-Date).AddMinutes(-10)} |
+              Select-Object -First 50 TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+              Format-List
+          }
+          catch {
+            Write-Host "Nenhum evento de aplicação encontrado no intervalo de diagnóstico."
+          }
+
+      - name: Remove smoke-test service
+        if: always()
+        shell: pwsh
+        run: |
+          Push-Location dist/windows/VOXELRouterPackage
+          try {
+            if (Get-Service -Name VOXELRouterService -ErrorAction SilentlyContinue) {
+              ./uninstall.ps1 -RemoveData
+            }
+          }
+          finally {
+            Pop-Location
+          }
 
       - name: Upload distributable package
         uses: actions/upload-artifact@v4
