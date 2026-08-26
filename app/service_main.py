@@ -67,6 +67,8 @@ class RouterRuntime:
             host=self.settings.local_api_host,
             port=self.settings.local_api_port,
             log_level="warning",
+            log_config=None,
+            access_log=False,
         )
         self.api_server = uvicorn.Server(config)
         threading.Thread(target=self.api_server.run, name="local-api", daemon=True).start()
