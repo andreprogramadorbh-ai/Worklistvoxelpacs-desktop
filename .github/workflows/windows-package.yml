@@ -31,6 +31,21 @@ jobs:
         shell: pwsh
         run: ./installer/build.ps1 -PythonCommand python
 
+      - name: Install service and validate synthetic DICOM reception
+        shell: pwsh
+        run: |
+          Push-Location dist/windows/VOXELRouterPackage
+          try {
+            ./install.ps1
+            ./test-reception.ps1
+          }
+          finally {
+            if (Get-Service -Name VOXELRouterService -ErrorAction SilentlyContinue) {
+              ./uninstall.ps1 -RemoveData
+            }
+            Pop-Location
+          }
+
       - name: Upload distributable package
         uses: actions/upload-artifact@v4
         with:
