@@ -6,6 +6,7 @@ param(
   [int]$DicomPort = 11112,
   [string[]]$AllowedCallingAes = @("VOXEL_TEST_SCU"),
   [string[]]$AllowedSourceCidrs = @("127.0.0.1/32"),
+  [switch]$UseLocalService,
   [switch]$OverwriteConfig,
   [switch]$OpenFirewallRule
 )
@@ -79,9 +80,14 @@ $serviceExecutable = Join-Path $InstallRoot "VOXELRouterService.exe"
 & $serviceExecutable --startup auto install
 if ($LASTEXITCODE -ne 0) { throw "Falha ao registrar o serviço Windows." }
 
-# O serviço não deve rodar como administrador; LocalService tem a ACL de dados mínima acima.
-& sc.exe config $serviceName obj= "NT AUTHORITY\LocalService" password= "" | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "Falha ao configurar a conta LocalService." }
+# Por compatibilidade, o serviço usa a conta LocalSystem padrão do Windows.
+# LocalService pode ser habilitada explicitamente quando a política local permitir.
+if ($UseLocalService) {
+  & sc.exe config $serviceName obj= "NT AUTHORITY\LocalService" password= "" | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Não foi possível configurar LocalService; o serviço será mantido na conta padrão LocalSystem."
+  }
+}
 & sc.exe failure $serviceName reset= 86400 actions= restart/5000/restart/15000/restart/60000 | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Falha ao configurar a recuperação automática do serviço." }
 

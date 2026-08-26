@@ -46,7 +46,7 @@ cd C:\Temp\VOXELRouterPackage
 .\install.ps1
 ```
 
-O instalador copia os binários para `C:\Program Files\VOXEL\Router`, cria a configuração em `C:\ProgramData\VOXEL\Router\config\config.json`, aplica ACL restrita, registra o serviço `VOXELRouterService` com a conta interna `LocalService` e o inicia automaticamente. Por padrão, a allowlist aceita somente o AE de teste `VOXEL_TEST_SCU` a partir de `127.0.0.1`.
+O instalador copia os binários para `C:\Program Files\VOXEL\Router`, cria a configuração em `C:\ProgramData\VOXEL\Router\config\config.json`, aplica ACL restrita, registra o serviço `VOXELRouterService` com a conta padrão `LocalSystem` e o inicia automaticamente. Por padrão, a allowlist aceita somente o AE de teste `VOXEL_TEST_SCU` a partir de `127.0.0.1`. Em ambiente homologado, a conta `LocalService` pode ser solicitada com o parâmetro `-UseLocalService`, desde que a política local permita essa alteração.
 
 Confirme o estado do serviço:
 
