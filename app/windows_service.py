@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 
 from app.service_main import RouterRuntime, configure_logging, load_settings
 
@@ -54,7 +55,12 @@ def main() -> None:
     """Ponto de entrada empacotado somente para Windows."""
     if os.name != "nt":
         raise RuntimeError("O serviço Windows do VOXEL Router só pode ser executado no Windows.")
-    win32serviceutil.HandleCommandLine(VOXELRouterWindowsService)
+    if len(sys.argv) == 1:
+        servicemanager.Initialize()
+        servicemanager.PrepareToHostSingle(VOXELRouterWindowsService)
+        servicemanager.StartServiceCtrlDispatcher()
+    else:
+        win32serviceutil.HandleCommandLine(VOXELRouterWindowsService)
 
 
 if __name__ == "__main__":
