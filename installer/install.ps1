@@ -1,22 +1,107 @@
+[CmdletBinding()]
 param(
   [string]$InstallRoot = "C:\Program Files\VOXEL\Router",
-  [string]$DataRoot = "C:\ProgramData\VOXEL\Router"
+  [string]$DataRoot = "C:\ProgramData\VOXEL\Router",
+  [string]$RouterAETitle = "VOXEL_ROUTER",
+  [int]$DicomPort = 11112,
+  [string[]]$AllowedCallingAes = @("VOXEL_TEST_SCU"),
+  [string[]]$AllowedSourceCidrs = @("127.0.0.1/32"),
+  [switch]$OverwriteConfig,
+  [switch]$OpenFirewallRule
 )
 
-$ErrorActionPreference = 'Stop'
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  throw "Execute este instalador em PowerShell elevado."
+$ErrorActionPreference = "Stop"
+$serviceName = "VOXELRouterService"
+$serviceDisplayName = "VOXEL Router Service"
+
+function Assert-Administrator {
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+  if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw "Execute este instalador em um PowerShell elevado (Executar como administrador)."
+  }
 }
 
-New-Item -ItemType Directory -Force -Path $InstallRoot, $DataRoot, "$DataRoot\spool", "$DataRoot\quarantine", "$DataRoot\database", "$DataRoot\logs", "$DataRoot\config" | Out-Null
-# A ACL final deve ser aplicada à conta de serviço escolhida durante a instalação.
-$serviceName = 'VOXELRouterService'
-$binary = "`"$InstallRoot\voxel-router-service.exe`""
-if (Get-Service -Name $serviceName -ErrorAction SilentlyContinue) {
-  Stop-Service $serviceName -Force
-  sc.exe delete $serviceName | Out-Null
+function Wait-ServiceRemoval {
+  param([string]$Name)
+  for ($attempt = 0; $attempt -lt 15; $attempt++) {
+    if (-not (Get-Service -Name $Name -ErrorAction SilentlyContinue)) {
+      return
+    }
+    Start-Sleep -Seconds 1
+  }
+  throw "O serviço $Name não foi removido no tempo esperado."
 }
-sc.exe create $serviceName binPath= $binary start= auto DisplayName= "VOXEL Router Service" | Out-Null
-sc.exe failure $serviceName reset= 86400 actions= restart/5000/restart/15000/restart/60000 | Out-Null
-Set-Service -Name $serviceName -StartupType Automatic
-Write-Host "VOXEL Router preparado. Configure AE Title, Cloud e allowlists antes de iniciar o serviço." -ForegroundColor Green
+
+Assert-Administrator
+
+$sourceServiceDirectory = Join-Path $PSScriptRoot "service"
+$sourceTestDirectory = Join-Path $PSScriptRoot "test"
+$configTemplate = Join-Path $PSScriptRoot "config.template.json"
+if (-not (Test-Path (Join-Path $sourceServiceDirectory "VOXELRouterService.exe"))) {
+  throw "VOXELRouterService.exe não foi encontrado. Execute installer\build.ps1 e use o conteúdo de VOXELRouterPackage.zip."
+}
+if (-not (Test-Path (Join-Path $sourceTestDirectory "VOXELRouterDicomTest.exe"))) {
+  throw "VOXELRouterDicomTest.exe não foi encontrado no pacote."
+}
+if (-not (Test-Path $configTemplate)) {
+  throw "config.template.json não foi encontrado no pacote."
+}
+
+$existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+if ($existingService) {
+  if ($existingService.Status -ne "Stopped") {
+    Stop-Service -Name $serviceName -Force -ErrorAction Stop
+  }
+  & sc.exe delete $serviceName | Out-Null
+  Wait-ServiceRemoval -Name $serviceName
+}
+
+New-Item -ItemType Directory -Force -Path $InstallRoot, $DataRoot, (Join-Path $DataRoot "config"), (Join-Path $DataRoot "database"), (Join-Path $DataRoot "spool"), (Join-Path $DataRoot "quarantine"), (Join-Path $DataRoot "logs") | Out-Null
+Copy-Item -Path (Join-Path $sourceServiceDirectory "*") -Destination $InstallRoot -Recurse -Force
+Copy-Item -Path $sourceTestDirectory -Destination (Join-Path $InstallRoot "test") -Recurse -Force
+
+$configPath = Join-Path $DataRoot "config\config.json"
+if ($OverwriteConfig -or -not (Test-Path $configPath)) {
+  $config = Get-Content -Raw -Path $configTemplate | ConvertFrom-Json
+  $config.router_ae_title = $RouterAETitle.Trim().ToUpperInvariant()
+  $config.dicom_port = $DicomPort
+  $config.allowed_calling_aes = @($AllowedCallingAes | ForEach-Object { $_.Trim().ToUpperInvariant() } | Where-Object { $_ })
+  $config.allowed_source_cidrs = @($AllowedSourceCidrs | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+  $config | ConvertTo-Json -Depth 8 | Set-Content -Path $configPath -Encoding UTF8
+}
+
+# SYSTEM e Administradores têm controle total; LocalService tem somente modificação nos dados operacionais.
+& icacls.exe $DataRoot /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-19:(OI)(CI)M" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Falha ao aplicar ACL em $DataRoot." }
+
+$serviceExecutable = Join-Path $InstallRoot "VOXELRouterService.exe"
+& $serviceExecutable --startup auto install
+if ($LASTEXITCODE -ne 0) { throw "Falha ao registrar o serviço Windows." }
+
+# O serviço não deve rodar como administrador; LocalService tem a ACL de dados mínima acima.
+& sc.exe config $serviceName obj= "NT AUTHORITY\LocalService" password= "" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Falha ao configurar a conta LocalService." }
+& sc.exe failure $serviceName reset= 86400 actions= restart/5000/restart/15000/restart/60000 | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Falha ao configurar a recuperação automática do serviço." }
+
+if ($OpenFirewallRule) {
+  $ruleName = "VOXEL Router DICOM C-STORE ($DicomPort)"
+  Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+  New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol TCP -LocalPort $DicomPort -Profile Domain,Private | Out-Null
+}
+
+Start-Service -Name $serviceName
+for ($attempt = 0; $attempt -lt 15; $attempt++) {
+  $currentService = Get-Service -Name $serviceName
+  if ($currentService.Status -eq "Running") {
+    Write-Host "Instalação concluída." -ForegroundColor Green
+    Write-Host "AE Title: $RouterAETitle | Porta DICOM: $DicomPort" -ForegroundColor Green
+    Write-Host "Configuração: $configPath" -ForegroundColor Cyan
+    Write-Host "Teste local: .\test-reception.ps1" -ForegroundColor Cyan
+    exit 0
+  }
+  Start-Sleep -Seconds 1
+}
+
+throw "O serviço foi instalado, mas não entrou no estado Running. Consulte $DataRoot\logs\router.log."

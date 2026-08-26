@@ -1,0 +1,31 @@
+{
+  "unit_name": "VOXEL Router",
+  "router_ae_title": "VOXEL_ROUTER",
+  "dicom_host": "0.0.0.0",
+  "dicom_port": 11112,
+  "mwl_port": 11113,
+  "local_api_host": "127.0.0.1",
+  "local_api_port": 17841,
+  "max_retry": 12,
+  "retry_base_seconds": 30,
+  "retry_max_seconds": 3600,
+  "association_timeout_seconds": 20,
+  "dimse_timeout_seconds": 90,
+  "network_timeout_seconds": 30,
+  "retention_after_delivery_days": 7,
+  "quarantine_policy": "quarantine",
+  "allowed_calling_aes": [
+    "VOXEL_TEST_SCU"
+  ],
+  "allowed_source_cidrs": [
+    "127.0.0.1/32"
+  ],
+  "cloud": {
+    "host": "",
+    "port": 4242,
+    "called_ae_title": "VOXELSRVPACS",
+    "calling_ae_title": "VOXEL_ROUTER",
+    "tls_mode": "disabled",
+    "tls_server_name": ""
+  }
+}

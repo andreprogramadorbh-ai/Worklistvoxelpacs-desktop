@@ -29,6 +29,7 @@ packaging = ["pyinstaller>=6.10,<7.0"]
 [project.scripts]
 voxel-router = "app.main:main"
 voxel-router-service = "app.service_main:main"
+voxel-router-windows-service = "app.windows_service:main"
 
 [tool.setuptools]
 packages = [

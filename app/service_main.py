@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 import signal
 import threading
-import time
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import uvicorn
 
 from app.api.server import LocalApi
-from app.config.models import ServiceSettings
+from app.config.models import ServiceSettings, default_config_path
 from app.config.repository import SettingsRepository
 from app.database.database import Database
 from app.dicom.mwl.worklist_scp import WorklistScp
@@ -48,12 +48,26 @@ class RouterRuntime:
         LOGGER.info("router_service_stopped")
 
     def _prepare_directories(self) -> None:
-        for path in (self.settings.spool_path, self.settings.quarantine_path, self.settings.log_path, self.settings.database_path.parent):
+        for path in (
+            self.settings.spool_path,
+            self.settings.quarantine_path,
+            self.settings.log_path,
+            self.settings.database_path.parent,
+        ):
             path.mkdir(parents=True, exist_ok=True)
 
     def _start_api(self) -> None:
-        api = LocalApi(self.database, self.settings, self.settings.base_path / "config" / "local-api.token")
-        config = uvicorn.Config(api.app, host=self.settings.local_api_host, port=self.settings.local_api_port, log_level="warning")
+        api = LocalApi(
+            self.database,
+            self.settings,
+            self.settings.base_path / "config" / "local-api.token",
+        )
+        config = uvicorn.Config(
+            api.app,
+            host=self.settings.local_api_host,
+            port=self.settings.local_api_port,
+            log_level="warning",
+        )
         self.api_server = uvicorn.Server(config)
         threading.Thread(target=self.api_server.run, name="local-api", daemon=True).start()
 
@@ -66,10 +80,33 @@ class RouterRuntime:
                 LOGGER.exception("queue_dispatcher_failure")
 
 
+def load_settings(config_path: Path | None = None) -> ServiceSettings:
+    """Carrega a configuração compartilhada pelo console e pelo serviço Windows."""
+    return SettingsRepository(config_path or default_config_path()).load()
+
+
+def configure_logging(settings: ServiceSettings) -> None:
+    """Configura log rotativo durável, independente do contexto de conta do serviço."""
+    settings.log_path.mkdir(parents=True, exist_ok=True)
+    root_logger = logging.getLogger()
+    if any(getattr(handler, "name", "") == "voxel-router-file" for handler in root_logger.handlers):
+        return
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    file_handler = RotatingFileHandler(
+        settings.log_path / "router.log",
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.name = "voxel-router-file"
+    file_handler.setFormatter(formatter)
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+
+
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    base = Path.home() / ".voxel-router" / "config.json"
-    settings = SettingsRepository(base).load()
+    settings = load_settings()
+    configure_logging(settings)
     runtime = RouterRuntime(settings)
     signal.signal(signal.SIGTERM, lambda *_: runtime.stop())
     signal.signal(signal.SIGINT, lambda *_: runtime.stop())

@@ -1,9 +1,10 @@
-"""Configuração central do VOXEL Router Desktop.
+"""Modelos de configuração do VOXEL Router.
 
 Segredos ficam fora deste arquivo e devem ser protegidos por DPAPI no Windows.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -13,6 +14,27 @@ from platformdirs import user_data_dir
 APP_NAME = "VOXEL ROUTER DESKTOP"
 APP_VENDOR = "VOXEL PACS"
 CONFIG_VERSION = 1
+
+
+def default_data_root() -> Path:
+    """Retorna o diretório durável do Router para o contexto de execução atual.
+
+    Em Windows o local é comum à máquina para que o serviço não dependa do
+    perfil de usuário da conta que o executa. Em desenvolvimento pode ser
+    sobrescrito por ``VOXEL_ROUTER_DATA_ROOT``.
+    """
+    configured_root = os.getenv("VOXEL_ROUTER_DATA_ROOT", "").strip()
+    if configured_root:
+        return Path(configured_root)
+    if os.name == "nt":
+        program_data = os.getenv("PROGRAMDATA", r"C:\ProgramData")
+        return Path(program_data) / "VOXEL" / "Router"
+    return Path(user_data_dir("VOXELRouter", APP_VENDOR, roaming=False))
+
+
+def default_config_path() -> Path:
+    """Caminho único da configuração não secreta do Router."""
+    return default_data_root() / "config" / "config.json"
 
 
 @dataclass(slots=True)
@@ -48,7 +70,7 @@ class ServiceSettings:
 
     @property
     def base_path(self) -> Path:
-        return Path(user_data_dir("VOXELRouter", APP_VENDOR, roaming=False))
+        return default_data_root()
 
     @property
     def database_path(self) -> Path:

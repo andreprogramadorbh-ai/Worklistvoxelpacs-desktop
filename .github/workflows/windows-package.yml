@@ -1,0 +1,40 @@
+name: Build Windows installer package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "installer/**"
+      - "tools/**"
+      - "pyproject.toml"
+      - ".github/workflows/windows-package.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Build package
+        shell: pwsh
+        run: ./installer/build.ps1 -PythonCommand python
+
+      - name: Upload distributable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VOXELRouterPackage-windows-x64
+          path: dist/windows/VOXELRouterPackage.zip
+          if-no-files-found: error
+          retention-days: 14
