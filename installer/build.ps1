@@ -72,6 +72,7 @@ Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterDicomTest") (J
 Copy-Item -Force (Join-Path $repositoryRoot "installer\install.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\uninstall.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\test-reception.ps1") $packageDirectory
+Copy-Item -Force (Join-Path $repositoryRoot "installer\repair.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\config.template.json") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "docs\WINDOWS_INSTALL.md") $packageDirectory
 

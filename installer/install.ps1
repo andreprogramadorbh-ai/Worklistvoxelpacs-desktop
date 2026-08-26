@@ -105,7 +105,7 @@ for ($attempt = 0; $attempt -lt 15; $attempt++) {
     Write-Host "AE Title: $RouterAETitle | Porta DICOM: $DicomPort" -ForegroundColor Green
     Write-Host "Configuração: $configPath" -ForegroundColor Cyan
     Write-Host "Teste local: .\test-reception.ps1" -ForegroundColor Cyan
-    exit 0
+    return
   }
   Start-Sleep -Seconds 1
 }

@@ -56,6 +56,15 @@ Get-Service VOXELRouterService
 
 O resultado esperado contém `Status : Running`.
 
+### Reparo de uma instalação anterior
+
+Se uma versão anterior deixou o serviço parado, use o pacote atualizado e execute o reparo em PowerShell elevado. O comando reinstala o serviço, preserva a configuração existente e executa o teste DICOM sintético ao final:
+
+```powershell
+cd C:\\Users\\dedec\\Downloads\\VOXELRouterPackage
+.\\repair.ps1
+```
+
 ## Testar C-ECHO e C-STORE sem dados clínicos
 
 Ainda em PowerShell, execute:
