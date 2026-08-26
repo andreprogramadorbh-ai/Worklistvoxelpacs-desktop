@@ -69,7 +69,8 @@ if ($OverwriteConfig -or -not (Test-Path $configPath)) {
   $config.dicom_port = $DicomPort
   $config.allowed_calling_aes = @($AllowedCallingAes | ForEach-Object { $_.Trim().ToUpperInvariant() } | Where-Object { $_ })
   $config.allowed_source_cidrs = @($AllowedSourceCidrs | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-  $config | ConvertTo-Json -Depth 8 | Set-Content -Path $configPath -Encoding UTF8
+  $configJson = $config | ConvertTo-Json -Depth 8
+  [System.IO.File]::WriteAllText($configPath, $configJson, [System.Text.UTF8Encoding]::new($false))
 }
 
 # SYSTEM e Administradores têm controle total; LocalService tem somente modificação nos dados operacionais.

@@ -17,7 +17,8 @@ class SettingsRepository:
     def load(self) -> ServiceSettings:
         if not self.path.exists():
             return ServiceSettings()
-        raw = json.loads(self.path.read_text(encoding="utf-8"))
+        # Windows PowerShell 5.1 escreve UTF-8 com BOM; utf-8-sig aceita ambos os formatos.
+        raw = json.loads(self.path.read_text(encoding="utf-8-sig"))
         cloud = CloudDicomDestination(**raw.pop("cloud", {}))
         return ServiceSettings(cloud=cloud, **raw)
 

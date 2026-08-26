@@ -21,3 +21,12 @@ def test_service_loads_shared_config_path(monkeypatch, tmp_path: Path):
     assert settings.base_path == tmp_path
     repository.save(settings)
     assert config_path.exists()
+
+
+def test_settings_repository_accepts_windows_utf8_bom(tmp_path: Path):
+    config_path = tmp_path / "config.json"
+    config_path.write_bytes(b'\xef\xbb\xbf{"router_ae_title": "VOXEL_ROUTER"}')
+
+    settings = SettingsRepository(config_path).load()
+
+    assert settings.router_ae_title == "VOXEL_ROUTER"
