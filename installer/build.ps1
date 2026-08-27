@@ -75,6 +75,19 @@ Copy-Item -Force (Join-Path $repositoryRoot "installer\test-reception.ps1") $pac
 Copy-Item -Force (Join-Path $repositoryRoot "installer\repair.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\config.template.json") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "docs\WINDOWS_INSTALL.md") $packageDirectory
+$commit = "local-source"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+  $detectedCommit = & git -C $repositoryRoot rev-parse --short HEAD 2>$null
+  if ($LASTEXITCODE -eq 0 -and $detectedCommit) {
+    $commit = $detectedCommit.Trim()
+  }
+}
+@(
+  "VOXEL Router Windows Package",
+  "Build UTC: $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))",
+  "Commit: $commit",
+  "Validation: service, local API health, C-ECHO and C-STORE"
+) | Set-Content -Path (Join-Path $packageDirectory "PACKAGE_INFO.txt") -Encoding UTF8
 
 $archivePath = Join-Path $OutputDirectory "VOXELRouterPackage.zip"
 Compress-Archive -Path (Join-Path $packageDirectory "*") -DestinationPath $archivePath -Force

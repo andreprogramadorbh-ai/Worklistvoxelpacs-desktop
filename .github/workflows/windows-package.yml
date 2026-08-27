@@ -39,6 +39,15 @@ jobs:
           try {
             ./install.ps1
             ./test-reception.ps1
+            Start-Sleep -Seconds 5
+            $service = Get-Service -Name VOXELRouterService
+            if ($service.Status -ne "Running") {
+              throw "O serviço encerrou após o teste DICOM. Estado atual: $($service.Status)."
+            }
+            $health = Invoke-RestMethod -Uri "http://127.0.0.1:17841/health"
+            if ($health.status -ne "ok") {
+              throw "A API local não respondeu ao health check esperado."
+            }
             $smokeTestSucceeded = $true
           }
           finally {
