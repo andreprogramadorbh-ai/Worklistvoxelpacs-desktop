@@ -31,6 +31,15 @@ jobs:
         shell: pwsh
         run: ./installer/build.ps1 -PythonCommand python
 
+      - name: Verify visual desktop executable
+        shell: pwsh
+        run: |
+          $desktopExecutable = "dist/windows/VOXELRouterDesktop/VOXELRouterDesktop.exe"
+          if (-not (Test-Path $desktopExecutable)) {
+            throw "O executável visual VOXELRouterDesktop.exe não foi gerado."
+          }
+          Get-Item $desktopExecutable | Select-Object Name, Length, LastWriteTime
+
       - name: Install service and validate synthetic DICOM reception
         shell: pwsh
         run: |

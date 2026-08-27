@@ -30,6 +30,7 @@ packaging = ["pyinstaller>=6.10,<7.0"]
 voxel-router = "app.main:main"
 voxel-router-service = "app.service_main:main"
 voxel-router-windows-service = "app.windows_service:main"
+voxel-router-desktop = "desktop.main_window:main"
 
 [tool.setuptools]
 packages = [
@@ -50,6 +51,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
 
 [tool.coverage.run]
 source = ["app"]

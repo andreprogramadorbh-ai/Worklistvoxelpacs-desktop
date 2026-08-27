@@ -27,5 +27,18 @@
     "calling_ae_title": "VOXEL_ROUTER",
     "tls_mode": "disabled",
     "tls_server_name": ""
+  },
+  "ris": {
+    "enabled": false,
+    "base_url": "",
+    "device_id": "",
+    "timeout_seconds": 20
+  },
+  "pacs": {
+    "enabled": false,
+    "base_url": "",
+    "username": "",
+    "timeout_seconds": 30,
+    "verify_tls": true
   }
 }

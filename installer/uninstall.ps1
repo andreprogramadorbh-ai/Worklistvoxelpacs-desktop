@@ -24,6 +24,9 @@ if ($service) {
 }
 
 Get-NetFirewallRule -DisplayName "VOXEL Router DICOM C-STORE (*)" -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+Get-NetFirewallRule -DisplayName "VOXEL Router MWL (*)" -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+$shortcutPath = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\VOXEL PACS\VOXEL Router Desktop.lnk"
+Remove-Item -LiteralPath $shortcutPath -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $InstallRoot -Force -Recurse -ErrorAction SilentlyContinue
 
 if ($RemoveData) {

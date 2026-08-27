@@ -48,6 +48,23 @@ class CloudDicomDestination:
 
 
 @dataclass(slots=True)
+class RisApiSettings:
+    enabled: bool = False
+    base_url: str = ""
+    device_id: str = ""
+    timeout_seconds: int = 20
+
+
+@dataclass(slots=True)
+class PacsApiSettings:
+    enabled: bool = False
+    base_url: str = ""
+    username: str = ""
+    timeout_seconds: int = 30
+    verify_tls: bool = True
+
+
+@dataclass(slots=True)
 class ServiceSettings:
     unit_name: str = ""
     router_ae_title: str = "VOXEL_ROUTER"
@@ -67,6 +84,8 @@ class ServiceSettings:
     allowed_calling_aes: list[str] = field(default_factory=list)
     allowed_source_cidrs: list[str] = field(default_factory=list)
     cloud: CloudDicomDestination = field(default_factory=CloudDicomDestination)
+    ris: RisApiSettings = field(default_factory=RisApiSettings)
+    pacs: PacsApiSettings = field(default_factory=PacsApiSettings)
 
     @property
     def base_path(self) -> Path:

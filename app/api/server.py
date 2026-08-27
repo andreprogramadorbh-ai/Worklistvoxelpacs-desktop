@@ -55,7 +55,48 @@ class LocalApi:
         def status() -> dict:
             with self.database.connection() as conn:
                 queue = conn.execute("SELECT status,COUNT(*) total FROM queue GROUP BY status").fetchall()
-            return {"queue": {row["status"]: row["total"] for row in queue}, "settings": self.settings.public_dict()}
+                metrics = {
+                    "queue": {row["status"]: row["total"] for row in queue},
+                    "worklist": conn.execute("SELECT COUNT(*) total FROM worklist WHERE status='SCHEDULED'").fetchone()["total"],
+                    "modalities": conn.execute("SELECT COUNT(*) total FROM modalities WHERE active=1").fetchone()["total"],
+                    "received": conn.execute("SELECT COUNT(*) total FROM dicom_instances WHERE state='RECEIVED'").fetchone()["total"],
+                    "quarantine": conn.execute("SELECT COUNT(*) total FROM quarantine_items WHERE resolved_at IS NULL").fetchone()["total"],
+                }
+            return {"metrics": metrics, "settings": self.settings.public_dict()}
+
+        @self.app.get("/modalities", dependencies=[Depends(self._authorize)])
+        def modalities() -> list[dict]:
+            with self.database.connection() as conn:
+                rows = conn.execute(
+                    "SELECT id,name,ae_title,host,port,modality,station_name,institution_name,active,last_echo_at,last_echo_status "
+                    "FROM modalities ORDER BY active DESC,name LIMIT 500"
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+        @self.app.get("/logs", dependencies=[Depends(self._authorize)])
+        def logs() -> list[dict]:
+            with self.database.connection() as conn:
+                rows = conn.execute(
+                    "SELECT occurred_at,level,category,event,detail FROM system_logs ORDER BY id DESC LIMIT 500"
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+        @self.app.get("/audit", dependencies=[Depends(self._authorize)])
+        def audit() -> list[dict]:
+            with self.database.connection() as conn:
+                rows = conn.execute(
+                    "SELECT occurred_at,actor,event_type,category,outcome,detail FROM audit_logs ORDER BY id DESC LIMIT 500"
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+        @self.app.get("/quarantine", dependencies=[Depends(self._authorize)])
+        def quarantine() -> list[dict]:
+            with self.database.connection() as conn:
+                rows = conn.execute(
+                    "SELECT id,source_ae,source_ip,reason_code,reason_detail,created_at,resolved_at "
+                    "FROM quarantine_items ORDER BY id DESC LIMIT 500"
+                ).fetchall()
+            return [dict(row) for row in rows]
 
         @self.app.get("/queue", dependencies=[Depends(self._authorize)])
         def queue() -> list[dict]:
