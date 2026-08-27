@@ -55,7 +55,8 @@ $commonArguments = @(
   "--specpath", $specDirectory,
   "--hidden-import", "win32timezone",
   "--hidden-import", "pythoncom",
-  "--hidden-import", "pywintypes"
+  "--hidden-import", "pywintypes",
+  "--hidden-import", "win32crypt"
 )
 
 & $venvPython -m PyInstaller @commonArguments "--console" "--name" "VOXELRouterService" "app\windows_service.py"
@@ -64,6 +65,9 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterService.exe." }
 & $venvPython -m PyInstaller @commonArguments "--windowed" "--uac-admin" "--name" "VOXELRouterDesktop" "desktop\main_window.py"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterDesktop.exe." }
 
+& $venvPython -m PyInstaller @commonArguments "--windowed" "--uac-admin" "--name" "VOXELRouterSetup" "installer\setup_windows.py"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterSetup.exe." }
+
 & $venvPython -m PyInstaller @commonArguments "--console" "--name" "VOXELRouterDicomTest" "tools\test_reception.py"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterDicomTest.exe." }
 
@@ -71,6 +75,7 @@ $packageDirectory = Join-Path $OutputDirectory "VOXELRouterPackage"
 New-Item -ItemType Directory -Force -Path $packageDirectory | Out-Null
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterService") (Join-Path $packageDirectory "service")
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterDesktop") (Join-Path $packageDirectory "desktop")
+Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterSetup") (Join-Path $packageDirectory "setup")
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterDicomTest") (Join-Path $packageDirectory "test")
 Copy-Item -Force (Join-Path $repositoryRoot "installer\install.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\uninstall.ps1") $packageDirectory
@@ -89,7 +94,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
   "VOXEL Router Windows Package",
   "Build UTC: $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))",
   "Commit: $commit",
-  "Components: Windows Service, Visual Desktop, Local API, C-ECHO and C-STORE",
+  "Components: Windows Service, Visual Desktop, Graphic Installer, Local API, C-ECHO and C-STORE",
   "Validation: service, local API health, C-ECHO and C-STORE"
 ) | Set-Content -Path (Join-Path $packageDirectory "PACKAGE_INFO.txt") -Encoding UTF8
 

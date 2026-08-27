@@ -35,10 +35,14 @@ jobs:
         shell: pwsh
         run: |
           $desktopExecutable = "dist/windows/VOXELRouterDesktop/VOXELRouterDesktop.exe"
+          $setupExecutable = "dist/windows/VOXELRouterSetup/VOXELRouterSetup.exe"
           if (-not (Test-Path $desktopExecutable)) {
             throw "O executável visual VOXELRouterDesktop.exe não foi gerado."
           }
-          Get-Item $desktopExecutable | Select-Object Name, Length, LastWriteTime
+          if (-not (Test-Path $setupExecutable)) {
+            throw "O instalador gráfico VOXELRouterSetup.exe não foi gerado."
+          }
+          Get-Item $desktopExecutable, $setupExecutable | Select-Object Name, Length, LastWriteTime
 
       - name: Install service and validate synthetic DICOM reception
         shell: pwsh
