@@ -104,10 +104,10 @@ jobs:
             Pop-Location
           }
 
-      - name: Upload distributable package
+      - name: Upload visual package for one-step extraction
         uses: actions/upload-artifact@v4
         with:
-          name: VOXELRouterPackage-windows-x64
-          path: dist/windows/VOXELRouterPackage.zip
+          name: VOXELRouterVisual-windows-x64
+          path: dist/windows/VOXELRouterPackage/
           if-no-files-found: error
           retention-days: 14
