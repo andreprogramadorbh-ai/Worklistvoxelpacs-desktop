@@ -65,7 +65,9 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterService.exe." }
 & $venvPython -m PyInstaller @commonArguments "--windowed" "--uac-admin" "--name" "VOXELRouterDesktop" "desktop\main_window.py"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterDesktop.exe." }
 
-& $venvPython -m PyInstaller @commonArguments "--windowed" "--uac-admin" "--name" "VOXELRouterSetup" "installer\setup_windows.py"
+$setupArguments = @($commonArguments | Where-Object { $_ -ne "--onedir" })
+$setupArguments += "--onefile"
+& $venvPython -m PyInstaller @setupArguments "--windowed" "--uac-admin" "--name" "VOXELRouterSetup" "installer\setup_windows.py"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar VOXELRouterSetup.exe." }
 
 & $venvPython -m PyInstaller @commonArguments "--console" "--name" "VOXELRouterDicomTest" "tools\test_reception.py"
@@ -75,7 +77,7 @@ $packageDirectory = Join-Path $OutputDirectory "VOXELRouterPackage"
 New-Item -ItemType Directory -Force -Path $packageDirectory | Out-Null
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterService") (Join-Path $packageDirectory "service")
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterDesktop") (Join-Path $packageDirectory "desktop")
-Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterSetup") (Join-Path $packageDirectory "setup")
+Copy-Item -Force (Join-Path $OutputDirectory "VOXELRouterSetup.exe") (Join-Path $packageDirectory "INSTALAR-VOXEL-ROUTER.exe")
 Copy-Item -Recurse -Force (Join-Path $OutputDirectory "VOXELRouterDicomTest") (Join-Path $packageDirectory "test")
 Copy-Item -Force (Join-Path $repositoryRoot "installer\install.ps1") $packageDirectory
 Copy-Item -Force (Join-Path $repositoryRoot "installer\uninstall.ps1") $packageDirectory
@@ -99,6 +101,16 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 ) | Set-Content -Path (Join-Path $packageDirectory "PACKAGE_INFO.txt") -Encoding UTF8
 
 $archivePath = Join-Path $OutputDirectory "VOXELRouterPackage.zip"
+@(
+  "VOXEL ROUTER - INSTALACAO VISUAL",
+  "",
+  "1. Clique com o botao direito em INSTALAR-VOXEL-ROUTER.exe.",
+  "2. Escolha Executar como administrador.",
+  "3. Confirme o aviso do Windows e clique em INSTALAR E ABRIR PAINEL.",
+  "",
+  "Nao e necessario executar scripts PowerShell para a instalacao visual."
+) | Set-Content -Path (Join-Path $packageDirectory "LEIA-PRIMEIRO.txt") -Encoding UTF8
+
 Compress-Archive -Path (Join-Path $packageDirectory "*") -DestinationPath $archivePath -Force
 
 Write-Host "Build concluído." -ForegroundColor Green

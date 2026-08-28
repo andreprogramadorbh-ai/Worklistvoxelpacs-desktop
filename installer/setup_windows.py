@@ -28,7 +28,10 @@ APP_TITLE = "Instalação do VOXEL Router"
 def package_root() -> Path:
     """Retorna a raiz do pacote tanto no código-fonte quanto no executável congelado."""
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent.parent
+        executable_directory = Path(sys.executable).resolve().parent
+        if (executable_directory / "service").exists():
+            return executable_directory
+        return executable_directory.parent
     return Path(__file__).resolve().parent.parent
 
 

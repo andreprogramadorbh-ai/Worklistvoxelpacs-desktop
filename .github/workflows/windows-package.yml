@@ -35,12 +35,12 @@ jobs:
         shell: pwsh
         run: |
           $desktopExecutable = "dist/windows/VOXELRouterDesktop/VOXELRouterDesktop.exe"
-          $setupExecutable = "dist/windows/VOXELRouterSetup/VOXELRouterSetup.exe"
+          $setupExecutable = "dist/windows/VOXELRouterPackage/INSTALAR-VOXEL-ROUTER.exe"
           if (-not (Test-Path $desktopExecutable)) {
             throw "O executável visual VOXELRouterDesktop.exe não foi gerado."
           }
           if (-not (Test-Path $setupExecutable)) {
-            throw "O instalador gráfico VOXELRouterSetup.exe não foi gerado."
+            throw "O instalador gráfico INSTALAR-VOXEL-ROUTER.exe não foi incluído no pacote."
           }
           Get-Item $desktopExecutable, $setupExecutable | Select-Object Name, Length, LastWriteTime
 
